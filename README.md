@@ -3,24 +3,24 @@
 An actor and distrubuted way of calculating information on airplanes using Salsa.
 
 ## Authors
-Daniel Tabin (tabind)
-Chris Turgeon (turgec)
+Chris Turgeon
+Daniel Tabin 
 
 ## Running the Program
 
-0. Make sure your terminal's working directory is the directory above the "solution" directory.
+0. Make sure your terminal's working directory is the directory above the "src" directory.
 
 1. Compile salsa files via
 ```
-java -cp salsa1.1.5.jar;. salsac.SalsaCompiler solution/*.salsa
+java -cp salsa1.1.5.jar;. salsac.SalsaCompiler src/*.salsa
 ```
 2. Compile java files via
 ```
-javac -cp salsa1.1.5.jar;. solution/*.java
+javac -cp salsa1.1.5.jar;. src/*.java
 ```
 3. Run the program with 
 ```
-java -cp salsa1.1.5.jar;. solution/Main [input.txt] [theaters.txt] [nameserver]
+java -cp salsa1.1.5.jar;. src/Main [input.txt] [theaters.txt] [nameserver]
 ```
 
 the optional command like args are the input file, the file listing the locations of theaters, and the ip address of the name server.  While the program runs with no commands, one, two, or three command line args, the order matters.  If just one argument is given, it must be the input.txt, the second must be theaters.txt and the third argument must be the nameserver.
@@ -28,7 +28,7 @@ the optional command like args are the input file, the file listing the location
 
 ## Additional Instructions for Running with Theaters
 
-You will need to open (number_of_theaters + 1) terminals, which all are in the directory above the "solution" directory.
+You will need to open (number_of_theaters + 1) terminals, which all are in the directory above the "src" directory.
 
 On your first terminal, type in:
 ```
@@ -46,7 +46,7 @@ java -cp salsa1.1.5.jar;. wwc.messaging.Theater 4041
 java -cp salsa1.1.5.jar;. wwc.messaging.Theater 4042
 ```
 
-These correspond to the theaters you have in your theaters.txt file, which should  again be in the directory above the "solution" directory.
+These correspond to the theaters you have in your theaters.txt file, which should  again be in the directory above the "src" directory.
 
 Finally run as outlined above.
 
