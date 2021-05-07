@@ -1,0 +1,307 @@
+module solution;
+
+import solution.PairEngine;
+
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;  
+import java.util.List;  
+import java.io.BufferedReader;
+import java.io.FileReader;
+
+behavior AirTraffic {
+
+	private List pairEngines; 
+	private int num_pair_engines;
+
+	private Map duplicateCheck;
+	private ArrayList index_results;
+	private ArrayList val_results;
+
+	public AirTraffic() {
+		this.pairEngines = new ArrayList();
+		this.duplicateCheck = new HashMap();
+		this.num_pair_engines = 0;
+	}
+
+	public void parseInput(String relativePath, String theatersFile, String nameServer) {
+		Vector theaters = new Vector();
+		String theater;
+		if(theatersFile != "") {
+			try {
+				BufferedReader in = new BufferedReader(new FileReader(theatersFile));
+				while ((theater = in.readLine())!= null) {
+					theaters.add(theater);
+				}
+				in.close(); 
+			} catch (IOException ioe) {
+				standardError<-println("[error] Can't open the file " + theatersFile + " for reading. Will create pairEngines locally.");
+				theatersFile = "";
+			}
+		}
+		int expectedFlightCount = 1;
+		BufferedReader reader;
+		try {
+			this.pairEngines.add(new PairEngine());
+			reader = new BufferedReader(new FileReader(relativePath));
+			String line = reader.readLine();
+			this.num_pair_engines = Integer.parseInt(line) - 1;
+			//standardOutput<-println("Reading " + line + " flights!");
+
+			// Initialize the expected number of PairEngines
+			
+			if(theatersFile != "") {
+				for (int i = 0; i < this.num_pair_engines; ++i) {
+					String uan_str = "uan://" + nameServer + "/id"+i;
+					String ual_str = "rmsp://" + theaters.get(i%theaters.size())+"/id"+i;
+
+					this.pairEngines.add(new PairEngine() at (new UAN(uan_str), new UAL(ual_str)));
+				}
+			}
+			else {
+				for (int i = 0; i < this.num_pair_engines; ++i) {
+					this.pairEngines.add(new PairEngine());
+				}
+			}
+
+			// Read in file, split tokens, and send flight info to PairEngines
+			while (true) {
+				line = reader.readLine();
+				if (line == null) {
+					break;
+				}
+				String[] tokens = line.split(" ");
+				standardOutput<-println(line);
+
+				// If empty input or duplicate entry, remove that PairEngine from array, and decrease number of expected
+				if (line.isEmpty() || this.duplicateCheck.get(tokens[0]) != null) {
+					this.pairEngines.remove(this.num_pair_engines);
+					--this.num_pair_engines;
+					standardOutput<-println("Found duplicate or empty input, expecting " + Integer.toString(this.num_pair_engines) + " PairEngines bc of line [" + line + "]");
+					continue;
+				}
+				this.duplicateCheck.put((String)tokens[0], true);
+
+				// Add this flight to `expectedFlightCount` number of PairEngines
+				for (int i = 0; i < expectedFlightCount; ++i) {
+					this.pairEngines.get(i)<-addPairsFromTokens(tokens);
+				}
+
+				// Increase the number of PairEngines receiving flight information
+				if (expectedFlightCount < this.num_pair_engines) {
+					++expectedFlightCount;
+				}
+			}
+			reader.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		standardOutput<-println("Expecting " + Integer.toString(this.num_pair_engines) + " PairEngines...");
+	}
+
+	// turn an Object[] returned from a join statement into an array list
+	private ArrayList getIndexResults(Object[] t) {
+		ArrayList arl = new ArrayList();
+		// we know we will have num_pair_engines results.
+		for (int i = 0; i < this.num_pair_engines; ++i) {
+			ArrayList a = (ArrayList) t[i];
+			arl.add(a);
+		}
+		return arl;
+	}
+
+	// get the pair with smallest dist from each pair engine
+	public ArrayList getMinIndexesDIST() {
+		join {
+			for (int i = 0; i < this.num_pair_engines; ++i) {
+				((PairEngine) this.pairEngines.get(i))<-getMinDIST();
+			}
+		}@
+		// convert to an arraylist for ease of use
+		getIndexResults(token) @ currentContinuation;
+	}
+	// get the pair with smallest tcpa from each pair engine
+	public ArrayList getMinIndexesTCPA() {
+		join {
+			for (int i = 0; i < this.num_pair_engines; ++i) {
+				((PairEngine) this.pairEngines.get(i))<-getMinTCPA();
+			}
+		}@
+		// convert to an arraylist for ease of use
+		getIndexResults(token) @ currentContinuation;
+	}
+	// get the pair with smallest dcpa from each pair engine
+	public ArrayList getMinIndexesDCPA() {
+		join {
+			for (int i = 0; i < this.num_pair_engines; ++i) {
+				((PairEngine) this.pairEngines.get(i))<-getMinDCPA();
+			}
+		}@
+		// convert to an arraylist for ease of use
+		getIndexResults(token) @ currentContinuation;
+	}
+
+	// given an array of mininmums and array of arrays of tied pairs return the best indexes
+	private ArrayList combineArrays(Object[] t, ArrayList a2d) {
+		// init the min
+		ArrayList final_arr = new ArrayList();
+		double min_dist = 99999999;
+		// go through all arrays
+		for (int i = 0; i < this.num_pair_engines; ++i) {
+			// get the list of tied indexes
+			ArrayList a = (ArrayList) a2d.get(i);
+			if(a != null && a.size() > 0) {
+				// get the min distance
+				double dist = (double) t[i];
+
+				// if its less get rid of old indexes, and add i and j
+				if (dist < min_dist) {
+					min_dist = dist;
+					// clear old arraylist
+					final_arr = new ArrayList();
+					for (int k = 0; k < a.size(); ++k) {
+						int j = (int) a.get(k);
+						final_arr.add(i);		// no pairs allowed so we're just appending both
+						final_arr.add(j);		// indexes; not an ideal solution but oh well
+					}
+				}
+				// else if equal, then just ad i and j
+				else if (dist == min_dist) {
+					for (int k = 0; k < a.size(); ++k) {
+						int j = (int) a.get(k);
+						final_arr.add(i);		// no pairs allowed so we're just appending both
+						final_arr.add(j);		// indexes; not an ideal solution but oh well
+					}
+				}
+			}
+		}
+		return final_arr;
+	}
+
+	// get the minimum dist value of each pair engine
+	public ArrayList getFinalMinDIST(ArrayList a2d) {
+		join {
+			// go through all of the best_pairs
+			for (int i = 0; i < this.num_pair_engines; ++i) {
+				ArrayList a = (ArrayList) a2d.get(i);
+				if(a != null && a.size() > 0) {
+					// get the first index (as all indexes in a are tied)
+					int j = (int) a.get(0);
+					// get the value of the pair engine
+					((PairEngine) this.pairEngines.get(i))<-calcDIST(j);
+				}
+			}
+		}@
+		combineArrays(token, a2d) @ currentContinuation;
+	}
+	// get the minimum tcpa value of each pair engine
+	public ArrayList getFinalMinTCPA(ArrayList a2d) {
+		join {
+			// go through all of the best_pairs
+			for (int i = 0; i < this.num_pair_engines; ++i) {
+				ArrayList a = (ArrayList) a2d.get(i);
+				if(a != null && a.size() > 0) {
+					// get the first index (as all indexes in a are tied)
+					int j = (int) a.get(0);
+					// get the value of the pair engine
+					((PairEngine) this.pairEngines.get(i))<-calcTCPA(j);
+				}
+			}
+		}@
+		combineArrays(token, a2d) @ currentContinuation;
+	}
+	// get the minimum dcpa value of each pair engine
+	public ArrayList getFinalMinDCPA(ArrayList a2d) {
+		join {
+			// go through all of the best_pairs
+			for (int i = 0; i < this.num_pair_engines; ++i) {
+				ArrayList a = (ArrayList) a2d.get(i);
+				if(a != null && a.size() > 0) {
+					// get the first index (as all indexes in a are tied)
+					int j = (int) a.get(0);
+					// get the value of the pair engine
+					((PairEngine) this.pairEngines.get(i))<-calcDCPA(j);
+				}
+			}
+		}@
+		combineArrays(token, a2d) @ currentContinuation;
+	}
+
+	// prepare a string for printing
+	public String formatOutputDIST(ArrayList indexes) {
+		if (indexes.size() < 2) {
+			return "ERROR, not enough indexes";
+		}
+		// get first i and j (only need first as they are tied)
+		int frst = (int) indexes.get(0);
+		int scnd = (int) indexes.get(1);
+		// calculate the value of the i j pair
+		((PairEngine) this.pairEngines.get(frst))<-calcDIST(scnd) @
+		buildPairs(token, indexes, false, "\nDist:") @ currentContinuation;
+	}
+	// prepare a string for printing
+	public String formatOutputTCPA(ArrayList indexes) {
+		if (indexes.size() < 2) {
+			return "ERROR, not enough indexes";
+		}
+		// get first i and j (only need first as they are tied)
+
+		int frst = (int) indexes.get(0);
+		int scnd = (int) indexes.get(1);
+		// calculate the value of the i j pair
+		((PairEngine) this.pairEngines.get(frst))<-calcTCPA(scnd) @
+		buildPairs(token, indexes, true, "\nTCPA:") @ currentContinuation;
+	}
+	// prepare a string for printing
+	public String formatOutputDCPA(ArrayList indexes) {
+		if (indexes.size() < 2) {
+			return "ERROR, not enough indexes";
+		}
+		// get first i and j (only need first as they are tied)
+
+		int frst = (int) indexes.get(0);
+		int scnd = (int) indexes.get(1);
+		// calculate the value of the i j pair
+		((PairEngine) this.pairEngines.get(frst))<-calcDCPA(scnd) @
+		buildPairs(token, indexes, true, "\nDCPA:") @ currentContinuation;
+	}
+
+	// Build up the string recursievly
+	private String buildPairsRecur(String next, String old_out, ArrayList indexes, int i, boolean otherStats) {
+		// add to the old string
+		String out = old_out + "\n" + next;
+		// if we are done, exit
+		if (i >= indexes.size()){
+			return out;
+		}
+		else {
+			// get the i and j indexes
+			int frst = (int) indexes.get(i);
+			int scnd = (int) indexes.get(i+1);
+
+			// get the pair string
+			((PairEngine) this.pairEngines.get(frst))<-getPairName(scnd, otherStats) @
+			// recurse
+			buildPairsRecur(token, out, indexes, i+2, otherStats) @ currentContinuation;
+		}
+	}
+	// "head" of the recursive function
+	private String buildPairs(double val, ArrayList indexes, boolean otherStats, String base) {
+		// beginin building the string
+		String out = base + "\n" + val;
+
+		int frst = (int) indexes.get(0);
+		int scnd = (int) indexes.get(1);
+
+		// recurse downwards
+		((PairEngine) this.pairEngines.get(frst))<-getPairName(scnd, otherStats) @
+		buildPairsRecur(token, out, indexes, 2, otherStats) @ currentContinuation;
+	}
+
+	public void validate() {
+		standardOutput<-println("\nView _0 members of each PairEngine");
+		for (int i = 0; i < this.pairEngines.size()-1; ++i) {
+			((PairEngine) this.pairEngines.get(i))<-validate();
+		}
+	}
+}

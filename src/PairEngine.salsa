@@ -1,0 +1,259 @@
+module solution;
+
+import java.io.*;
+import java.util.*;
+import java.util.ArrayList;
+import java.lang.Math;
+
+behavior PairEngine {
+
+	private int num_flights;
+
+    // Lists of flight information for all right-hand-sides of pairs
+	private ArrayList flight_IDs;
+	private ArrayList flight_lat_loc;
+	private ArrayList flight_lon_loc;
+	private ArrayList flight_lat_vel;
+	private ArrayList flight_lon_vel;
+    private ArrayList flight_alt;
+
+    // Member fields to store single, left-hand-side of flight pair
+	private String flght_0_ID;
+	private double lat_loc_0;
+	private double lon_loc_0;
+	private double lat_vel_0;
+	private double lon_vel_0;
+    private double alt_0;
+
+	public PairEngine() {
+		this.num_flights = 0;
+		this.flight_IDs = new ArrayList();
+		this.flight_lat_loc = new ArrayList();
+		this.flight_lon_loc = new ArrayList();
+		this.flight_lat_vel = new ArrayList();
+		this.flight_lon_vel = new ArrayList();
+        this.flight_alt = new ArrayList();
+	}
+
+    // takes in a string of tokens and adds flight information 
+	public void addPairsFromTokens(String[] tokens) {
+		this.flight_IDs.add(tokens[0]);
+		this.flight_lat_loc.add( Double.parseDouble(tokens[1]) ); 
+		this.flight_lon_loc.add( Double.parseDouble(tokens[2]) );
+        this.flight_alt.add( Double.parseDouble(tokens[5]) );
+		double trak = Double.parseDouble(tokens[3]);
+		double hspeed = Double.parseDouble(tokens[4]);
+		this.flight_lat_vel.add(this.latSpeed(trak, hspeed)); 
+		this.flight_lon_vel.add(this.lonSpeed(trak, hspeed));
+
+        // if first flight, make it left-hand-side pair
+		if (this.num_flights == 0) {
+			this.flght_0_ID = (String) this.flight_IDs.get(0);
+			this.lat_loc_0 = (double) this.flight_lat_loc.get(0);
+			this.lon_loc_0 = (double) this.flight_lon_loc.get(0);
+			this.lat_vel_0 = (double) this.flight_lat_vel.get(0);
+			this.lon_vel_0 = (double) this.flight_lon_vel.get(0);
+            this.alt_0 = (double) this.flight_alt.get(0);
+		}
+		++this.num_flights;
+
+	}
+
+    // tester function to print left-hand-side flight information, should be unique for each PairEngine instance
+	public void validate() {
+		standardOutput<-println("\t" + Integer.toString(this.flight_IDs.size()) + " " + Integer.toString(this.flight_alt.size()) + 
+                                ":" + flght_0_ID + ": " + Double.toString(lat_loc_0) + " " + Double.toString(lon_loc_0) + 
+                                " " + Double.toString(lat_vel_0) + " " + Double.toString(lon_vel_0));
+	}
+
+	// calculate lateral speed
+	private double latSpeed(double trak, double horizontalSpeed) {
+		double angleRadians = Math.toRadians(trak);
+		return horizontalSpeed * Math.sin(angleRadians);
+	}
+
+	// calculate longitudinal speed
+	private double lonSpeed(double trak, double horizontalSpeed) {
+		double angleRadians = Math.toRadians(trak);
+		return horizontalSpeed * Math.cos(angleRadians);
+	}
+
+
+	// calculate the distance
+	public double calcDIST(int j) {
+		double lat_2 = (double) this.flight_lat_loc.get(j);
+		double lon_2 = (double) this.flight_lon_loc.get(j);
+
+		// find difference in distances
+		double lat_diff = this.lat_loc_0 - lat_2;
+		double lon_diff = this.lon_loc_0 - lon_2;
+
+		// use eulcidian formula
+		return Math.sqrt((lat_diff*lat_diff) + (lon_diff*lon_diff));
+	}
+
+	// calculate TPCA
+	public double calcTCPA(int j) {
+		// get the long and lat speed and distances
+		double lat_loc_j = (double) this.flight_lat_loc.get(j);
+		double lon_loc_j = (double) this.flight_lon_loc.get(j);
+		double lat_vel_j = (double) this.flight_lat_vel.get(j);
+		double lon_vel_j = (double) this.flight_lon_vel.get(j);
+
+		// avoid divide by zero errors
+		if ((lat_vel_j == this.lat_vel_0) && (lon_vel_j == this.lon_vel_0)) {
+			return 0;
+		}
+		else {
+			// do calculation
+			double lat_loc_diff = this.lat_loc_0 - lat_loc_j;
+			double lon_loc_diff = this.lon_loc_0 - lon_loc_j;
+			double lat_vel_diff = this.lat_vel_0 - lat_vel_j;
+			double lon_vel_diff = this.lon_vel_0 - lon_vel_j;
+
+			double sv = (lat_loc_diff*lat_vel_diff) + (lon_loc_diff*lon_vel_diff);
+			double v2 = (lat_vel_diff*lat_vel_diff) + (lon_vel_diff*lon_vel_diff);
+
+			//standardOutput<-println("sv = " + Double.toString(sv) + "\t\tv2 = " + Double.toString(v2));
+
+			return -(sv/v2);
+		}
+	}
+
+	// calculate DPCA
+	public double calcDCPA(int j) {
+		// obtain tcpa (used in the formula)
+		double tcpa = calcTCPA(j);
+
+		// get the long and lat speed and distances
+		double lat_loc_j = (double) this.flight_lat_loc.get(j);
+		double lon_loc_j = (double) this.flight_lon_loc.get(j);
+		double lat_vel_j = (double) this.flight_lat_vel.get(j);
+		double lon_vel_j = (double) this.flight_lon_vel.get(j);
+
+		// calculate the diferences
+		double lat_loc_diff = this.lat_loc_0 - lat_loc_j;
+		double lon_loc_diff = this.lon_loc_0 - lon_loc_j;
+		double lat_vel_diff = this.lat_vel_0 - lat_vel_j;
+		double lon_vel_diff = this.lon_vel_0 - lon_vel_j;
+
+		// apply tcpa
+		double lat_svt = lat_loc_diff + (tcpa * lat_vel_diff);
+		double lon_svt = lon_loc_diff + (tcpa * lon_vel_diff);
+
+		// standardOutput<-println(lat_svt);
+		// standardOutput<-println(lon_svt);
+
+		// calculate dcpa
+		return Math.sqrt((lat_svt*lat_svt) + (lon_svt*lon_svt));
+	}
+
+	// printing helper function
+	public String getPairName(int j, boolean otherStats) {
+		// get the left and right flight IDs
+		String flght_j_ID = (String) flight_IDs.get(j);
+        String lhs = flght_0_ID;
+        String rhs = flght_j_ID;
+        // if we are printing tcpa or dcpa add othr stats
+        if (otherStats == true) {
+            lhs = lhs + " " + Double.toString(this.lat_loc_0) + 
+                        " " + Double.toString(this.lon_loc_0) + 
+                        " " + Double.toString(this.alt_0); 
+            rhs = rhs + " " + Double.toString((double)this.flight_lat_loc.get(j)) + 
+                        " " + Double.toString((double)this.flight_lon_loc.get(j)) + 
+                        " " + Double.toString((double)this.flight_alt.get(j));
+        }
+		String pair_name = lhs + " " + rhs;  
+		return pair_name;
+	}
+
+	// calculate min distance
+	public ArrayList getMinDIST() {
+		// init mins
+		ArrayList best_indexes = new ArrayList();
+		double min_dist = 9999999;
+
+		// go through all pairs
+		for (int j = 1; j < num_flights; j++) {
+			// calcualte dist
+			double dist = calcDIST(j);
+
+			// standardOutput<-println(dist);
+
+			//if new value is smaller make it the min
+			if (dist < min_dist) {
+				min_dist = dist;
+				best_indexes = new ArrayList();		//clear old arraylist
+				best_indexes.add(j);
+			}
+
+			// if new value is the same, add to list
+			else if (dist == min_dist) {
+				best_indexes.add(j);
+			}
+		}
+
+		// standardOutput<-println(best_indexes.get(0));
+		// standardOutput<-println(best_indexes.size());
+		return best_indexes;
+	}
+
+	// calculate min distances
+	public ArrayList getMinTCPA() {
+		// init min
+		double min_tcpa = 9999999;
+		ArrayList best_indexes = new ArrayList();
+
+		// go through all pairs
+		for (int j = 1; j < num_flights; j++) {
+			// calcualte tcpa
+			double tcpa = calcTCPA(j);
+
+			// ignore negative tcpa
+			if (tcpa < 0) {
+				tcpa = 9999999;
+			}
+
+			// if tcpa is less make the index the min
+			if (tcpa < min_tcpa) {
+				min_tcpa = tcpa;
+				best_indexes = new ArrayList();		//clear old arraylist
+				best_indexes.add(j);
+			}
+			// otherwise, if equal, add to list
+			else if (tcpa == min_tcpa) {
+				best_indexes.add(j);
+			}
+		}
+
+		// standardOutput<-println(min_tcpa);
+		return best_indexes;
+	}
+
+	// calculate min distances
+	public ArrayList getMinDCPA() {
+		// init min
+		double min_dcpa = 9999999;
+		ArrayList best_indexes = new ArrayList();
+
+		// go through all pairs
+		for (int j = 1; j < num_flights; j++) {
+			// calcualte dcpa
+			double dcpa = calcDCPA(j);
+
+			// if tcpa is less make the index the min
+			if (dcpa < min_dcpa) {
+				min_dcpa = dcpa;
+				best_indexes = new ArrayList();		//clear old arraylist
+				best_indexes.add(j);
+			}
+			// otherwise, if equal, add to list
+			else if (dcpa == min_dcpa) {
+				best_indexes.add(j);
+			}
+		}
+
+		// standardOutput<-println(min_dcpa);
+		return best_indexes;
+	}
+}

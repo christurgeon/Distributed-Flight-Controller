@@ -1,0 +1,47 @@
+module solution;
+
+import solution.AirTraffic;
+
+import java.io.*;
+import java.util.*;
+import java.util.ArrayList;
+import java.lang.Math;
+
+behavior Main{
+	String theaters_file = "";						//"theatersFile.txt"; // Default location for list of theaters (1st cmd line argument)
+													// List of ip addr:port separated by newlines
+	String inputs_file = "./2nmi.txt";
+	String name_server = "127.0.0.1:3030";			// Default name server (2nd cmd line argument))
+
+	public AirTraffic controller;
+
+	void act(String args[]) {
+		// load in command line args
+		int argc = args.length;
+		if(argc>=1) inputs_file = args[0];
+		if(argc>=2) theaters_file = args[1];
+		if(argc>=3) name_server = args[2];
+
+		// make a new air traffic controller
+		controller = new AirTraffic();
+		controller<-parseInput(inputs_file, theaters_file, name_server);
+
+		// run to find min dist
+		controller<-getMinIndexesDIST() @
+		controller<-getFinalMinDIST(token) @
+		controller<-formatOutputDIST(token) @
+		standardOutput <- println(token);
+
+		// run to find min TCPA
+		controller<-getMinIndexesTCPA() @
+		controller<-getFinalMinTCPA(token) @ 
+		controller<-formatOutputTCPA(token) @
+        standardOutput <- println(token);
+
+		// run to find min DCPA
+		controller<-getMinIndexesDCPA() @
+		controller<-getFinalMinDCPA(token) @ 
+		controller<-formatOutputDCPA(token) @
+		standardOutput <- println(token);
+	}
+}
