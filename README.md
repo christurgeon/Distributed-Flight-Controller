@@ -16,6 +16,7 @@ Daniel Tabin
 <li> Compile java files</li>
 <li> Execute the program with command line arguments </li>
 </ol>
+
 ```
 java -cp salsa1.1.5.jar;. salsac.SalsaCompiler src/*.salsa
 javac -cp salsa1.1.5.jar;. src/*.java
