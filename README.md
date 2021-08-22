@@ -1,4 +1,4 @@
-# Distributed Airplanes
+# Distributed Flight Controller
 A distrubuted way of calculating information on airplanes using the Actor model and SALSA language.
 
 The program calculates nearest neighbor via nautical distance, DCPA which is the minimum distance at the closest point of arrival, and TCPA which is the time from the initial position to the closest distance. Formula for calculating these values was taken from this NASA Paper found [here](https://ntrs.nasa.gov/api/citations/20150000558/downloads/20150000558.pdf). 
